@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mistri Hisaab Kitab App</title>
+    <style>
+        * { box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        body { background-color: #eef2f3; margin: 0; padding: 10px; display: flex; justify-content: center; }
+        .app-container { width: 100%; max-width: 480px; background: white; padding: 20px; border-radius: 15px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); margin-top: 10px; }
+        h2 { text-align: center; color: #1e3c72; margin-bottom: 20px; font-size: 24px; border-bottom: 2px solid #1e3c72; padding-bottom: 10px; }
+        .form-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 6px; font-weight: 600; color: #333; font-size: 14px; }
+        input { width: 100%; padding: 12px; border: 2px solid #ddd; border-radius: 8px; font-size: 16px; transition: 0.3s; }
+        input:focus { border-color: #1e3c72; outline: none; }
+        .btn-save { width: 100%; padding: 14px; background: linear-gradient(135deg, #1e3c72, #2a5298); color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        .btn-save:hover { opacity: 0.9; }
+        .list-heading { margin-top: 30px; color: #333; font-size: 18px; border-bottom: 1px solid #ddd; padding-bottom: 5px; }
+        .card-list { margin-top: 15px; }
+        .mistri-card { background: #f9f9f9; border: 1px solid #e0e0e0; border-left: 6px solid #1e3c72; padding: 15px; border-radius: 8px; margin-bottom: 15px; position: relative; box-shadow: 0 4px 6px rgba(0,0,0,0.02); }
+        .mistri-name { font-size: 18px; font-weight: bold; color: #1e3c72; margin-bottom: 8px; padding-right: 60px; }
+        .data-row { display: flex; justify-content: space-between; margin: 5px 0; font-size: 15px; color: #555; }
+        .status-paid { color: #2e7d32; font-weight: bold; }
+        .status-baki { color: #c62828; font-weight: bold; background: #ffebee; padding: 2px 6px; border-radius: 4px; }
+        .action-btns { position: absolute; top: 12px; right: 12px; display: flex; gap: 5px; }
+        .btn-action { border: none; padding: 6px 10px; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: bold; color: white; }
+        .btn-edit { background-color: #0288d1; }
+        .btn-delete { background-color: #d32f2f; }
+    </style>
+</head>
+<body>
+
+<div class="app-container">
+    <h2>👷 Mistri Hisaab Kitab</h2>
+    
+    <input type="hidden" id="editIndex" value="-1">
+    <div class="form-group">
+        <label>👤 Mistri Ka Naam:</label>
+        <input type="text" id="mistriName" placeholder="Jaise: Ramesh Kumar">
+    </div>
+    <div class="form-group">
+        <label>💰 Kul Mazdoori (Total ₹):</label>
+        <input type="number" id="totalAmount" placeholder="0">
+    </div>
+    <div class="form-group">
+        <label>✅ Kitna Paisa Diya (Paid ₹):</label>
+        <input type="number" id="paidAmount" placeholder="0">
+    </div>
+    <button class="btn-save" id="saveBtn" onclick="saveHisaab()">Hisaab Save Karein</button>
+
+    <h3 class="list-heading">📋 Sabhi Mistriyo ka Khata</h3>
+    <div class="card-list" id="recordsDisplay"></div>
+</div>
+
+<script>
+    document.addEventListener("DOMContentLoaded", renderRecords);
+
+    function saveHisaab() {
+        let name = document.getElementById('mistriName').value.trim();
+        let total = parseFloat(document.getElementById('totalAmount').value) || 0;
+        let paid = parseFloat(document.getElementById('paidAmount').value) || 0;
+        let editIndex = parseInt(document.getElementById('editIndex').value);
+
+        if (name === "") {
+            alert("Kripya Mistri ka naam zaroor likhein!");
+            return;
+        }
+
+        let baki = total - paid;
+        let newRecord = { name, total, paid, baki };
+        let currentList = JSON.parse(localStorage.getItem("mistri_records")) || [];
+
+        if (editIndex === -1) {
+            // Naya record jodein
+            currentList.push(newRecord);
+        } else {
+            // Purane record ko update karein
+            currentList[editIndex] = newRecord;
+            document.getElementById('editIndex').value = "-1";
+            document.getElementById('saveBtn').innerText = "Hisaab Save Karein";
+            document.getElementById('saveBtn').style.background = "linear-gradient(135deg, #1e3c72, #2a5298)";
+        }
+
+        localStorage.setItem("mistri_records", JSON.stringify(currentList));
+        
+        // Form Khali Karein
+        document.getElementById('mistriName').value = '';
+        document.getElementById('totalAmount').value = '';
+        document.getElementById('paidAmount').value = '';
+
+        renderRecords();
+    }
+
+    function renderRecords() {
+        let currentList = JSON.parse(localStorage.getItem("mistri_records")) || [];
+        let displayArea = document.getElementById('recordsDisplay');
+        displayArea.innerHTML = "";
+
+        if (currentList.length === 0) {
+            displayArea.innerHTML = "<p style='color:#888; text-align:center; margin-top:20px;'>Abhi tak koi hisaab nahi joda gaya hai.</p>";
+            return;
+        }
+
+        currentList.forEach((item, idx) => {
+            displayArea.innerHTML += `
+                <div class="mistri-card">
+                    <div class="action-btns">
+                        <button class="btn-action btn-edit" onclick="editRecord(${idx})">Edit</button>
+                        <button class="btn-action btn-delete" onclick="deleteRecord(${idx})">Del</button>
+                    </div>
+                    <div class="mistri-name">👤 ${item.name}</div>
+                    <div class="data-row"><span>Total Mazdoori:</span> <b>₹${item.total}</b></div>
+                    <div class="data-row"><span>Kitna Diya (Paid):</span> <span class="status-paid">₹${item.paid}</span></div>
+                    <div class="data-row"><span>Baki (Dena Hai):</span> <span class="status-baki">₹${item.baki}</span></div>
+                </div>
+            `;
+        });
+    }
+
+    function editRecord(idx) {
+        let currentList = JSON.parse(localStorage.getItem("mistri_records")) || [];
+        let record = currentList[idx];
+
+        document.getElementById('mistriName').value = record.name;
+        document.getElementById('totalAmount').value = record.total;
+        document.getElementById('paidAmount').value = record.paid;
+        document.getElementById('editIndex').value = idx;
+
+        document.getElementById('saveBtn').innerText = "Hisaab Update Karein";
+        document.getElementById('saveBtn').style.background = "#0288d1";
+        window.scrollTo({top: 0, behavior: 'smooth'});
+    }
+
+    function deleteRecord(idx) {
+        if (confirm("Kya aap is Mistri ka data delete karna chahte hain?")) {
+            let currentList = JSON.parse(localStorage.getItem("mistri_records")) || [];
+            currentList.splice(idx, 1);
+            localStorage.setItem("mistri_records", JSON.stringify(currentList));
+            renderRecords();
+        }
+    }
+</script>
+
+</body>
+</html>
+
